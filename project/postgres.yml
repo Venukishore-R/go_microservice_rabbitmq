@@ -1,0 +1,15 @@
+services:
+  
+  postgres:
+    image: 'postgres:14'
+    ports:
+      - "5432:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: go_microservice_auth_service
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data

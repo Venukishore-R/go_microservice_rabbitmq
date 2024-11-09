@@ -1,0 +1,125 @@
+version: "3"
+
+services:
+
+  caddy:
+    image: venukishore/micro-caddy:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+  rabbitmq:
+    image: 'rabbitmq:3.13-alpine'
+    deploy:
+      mode: global
+
+  mailhog:
+    image: 'mailhog/mailhog:latest'
+    ports:
+      - "8025:8025"
+    deploy:
+      mode: global
+    
+  mongo:
+    image: 'mongo:4.2.17-bionic'
+    ports:
+      - "27017:27017"
+    deploy:
+      mode: global
+    environment:
+      - MONGO_INITDB_DATABASE=logs
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - ./db-data/mongo/:/data/db 
+  
+  postgres:
+    image: 'postgres:14.2'
+    ports:
+      - "5432:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: go_microservice_auth_service
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:4.8.1
+    ports:
+      - "8080:8080"
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - postgres
+      - mongo
+
+  broker-service:
+    image: venukishore/broker-service:1.0.4
+    ports:
+      - "1700:1700"
+    deploy:
+      mode: replicated
+      replicas: 1
+  
+  listener-service:
+    image: venukishore/listener-service:1.0.0
+    deploy:
+      mode: replicated
+      replicas: 1
+  
+  auth-service:
+    image: venukishore/auth-service:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: root
+      DB_NAME: go_microservice_auth_service
+    
+  logger-service:
+    image: venukishore/logger-service:1.0.3
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  mailer-service:
+    image: venukishore/mailer-service:1.0.1
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      MAIL_DOMAIN: localhost
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_ENCRYPTION: none
+      MAIL_FROMNAME: "Venukishore R"
+      MAIL_FROM_ADDRESS: venuvk0304@gmail.com
+
+  front-end:
+    image: venukishore/front-end:1.1.2
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      - BROKER_URL=http://localhost:1700
+
+volumes:
+  caddy_data:
+    external: true
+  caddy_config:
+    external: true
